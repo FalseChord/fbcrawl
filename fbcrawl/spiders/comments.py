@@ -14,115 +14,117 @@ class CommentsSpider(FacebookSpider):
     name = "comments"
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','reply_to','date','reactions','text', \
-                               'source_url','url'],
+                               'source_url','post_url', 'page_url'],
         'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter',
         'CONCURRENT_REQUESTS' : 1
     }
 
     def __init__(self, *args, **kwargs):
-        if 'post' in kwargs and 'page' in kwargs:
-            raise AttributeError('You need to specifiy only one between post and page')
-        elif 'post' in kwargs:
-            self.page = kwargs['post']
-            self.type = 'post'
-        elif 'page' in kwargs:
-            self.type = 'page'
-        
         super().__init__(*args,**kwargs)
 
+
+    def start_requests(self):
+        for url in self.start_urls:
+            #navigate to provided page
+            group, page = self.trim_url(url)
+            href = self.url_root +page
+            self.logger.info('Scraping facebook posts {}'.format(href))
+            yield scrapy.Request(url=href,callback=self.parse_page,meta={'index': 1, 'group': group, 'flag':self.k},cookies=self.cookie)
+
     def parse_page(self, response):
-        '''
-        '''
-        if self.type == 'post':
-            yield scrapy.Request(url=response.url,
-                                 callback=self.parse_post,
-                                 priority=10,
-                                 meta={'index':1})
-        elif self.type == 'page':
-            #select all posts
-            for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):     
-                many_features = post.xpath('./@data-ft').get()
-                date = []
-                date.append(many_features)
-                date = parse_date(date,{'lang':self.lang})
-                current_date = datetime.strptime(date,'%Y-%m-%d %H:%M:%S') if date is not None else date
-    
-                if current_date is None:
-                    date_string = post.xpath('.//abbr/text()').get()
-                    date = parse_date2([date_string],{'lang':self.lang})
-                    current_date = datetime(date.year,date.month,date.day) if date is not None else date                
-                    date = str(date)
+        posts = []
+        if response.meta['group'] == 1:
+            posts = response.xpath("//div[@id='m_group_stories_container']//div[contains(@data-ft,'mf_story_key')]")
+        else:
+            posts = response.xpath("//div[contains(@data-ft,'top_level_post_id')]")
 
-                if abs(self.count) + 1 > self.max:
-                    raise CloseSpider('Reached max num of post: {}. Crawling finished'.format(abs(self.count)))
-                self.logger.info('Parsing post n = {}, post_date = {}'.format(abs(self.count)+1,date))
+        for post in posts:
+            many_features = post.xpath('./@data-ft').get()
+            date = []
+            date.append(many_features)
+            date = parse_date(date,{'lang':self.lang})
+            current_date = datetime.strptime(date,'%Y-%m-%d %H:%M:%S') if date is not None else date
 
-                #returns full post-link in a list
-                post = post.xpath(".//a[contains(@href,'footer')]/@href").extract() 
-                temp_post = response.urljoin(post[0])
-                self.count -= 1
-                yield scrapy.Request(temp_post, 
-                                     self.parse_post, 
-                                     priority = self.count,
-                                     meta={'index':1})
-    
-            #load following page, try to click on "more"
-            #after few pages have been scraped, the "more" link might disappears 
-            #if not present look for the highest year not parsed yet
-            #click once on the year and go back to clicking "more"
+            if current_date is None:
+                date_string = post.xpath('.//abbr/text()').get()
+                if date_string is None:
+                    continue
+                date = parse_date2([date_string],{'lang':self.lang})
+                current_date = datetime(date.year,date.month,date.day) if date is not None else date
+                date = str(date)
 
-            #new_page is different for groups
-            if self.group == 1:
-                new_page = response.xpath("//div[contains(@id,'stories_container')]/div[2]/a/@href").extract()      
-            else:
-                new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()      
-                #this is why lang is needed     
+            #if 'date' argument is reached stop crawling
+            if self.date > current_date:
+                return CloseSpider('Reached date: {}'.format(self.date))
+            #if 'skipto_date' argument is not reached, skip crawling
+            if self.skipto_date < current_date:
+                continue
 
-            if not new_page: 
-                self.logger.info('[!] "more" link not found, will look for a "year" link')
-                #self.k is the year link that we look for 
-                if response.meta['flag'] == self.k and self.k >= self.year:                
-                    xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
-                    new_page = response.xpath(xpath).extract()
-                    if new_page:
-                        new_page = response.urljoin(new_page[0])
-                        self.k -= 1
-                        self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))
-                        yield scrapy.Request(new_page, 
-                                             callback=self.parse_page, 
-                                             priority = -1000, 
-                                             meta={'flag':self.k})
-                    else:
-                        while not new_page: #sometimes the years are skipped this handles small year gaps
-                            self.logger.info('Link not found for year {}, trying with previous year {}'.format(self.k,self.k-1))
-                            self.k -= 1
-                            if self.k < self.year:
-                                raise CloseSpider('Reached date: {}. Crawling finished'.format(self.date))
-                            xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
-                            new_page = response.xpath(xpath).extract()
-                        self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))
-                        new_page = response.urljoin(new_page[0])
-                        self.k -= 1
-                        yield scrapy.Request(new_page, 
-                                             callback=self.parse_page,
-                                             priority = -1000,
-                                             meta={'flag':self.k}) 
-                else:
-                    self.logger.info('Crawling has finished with no errors!')
-            else:
-                new_page = response.urljoin(new_page[0])
-                if 'flag' in response.meta:
-                    self.logger.info('Page scraped, clicking on "more"! new_page = {}'.format(new_page))
+            #returns full post-link in a list
+            post = post.xpath(".//a[contains(@href,'footer')]/@href").extract()
+            temp_post = response.urljoin(post[0])
+
+            yield scrapy.Request(temp_post,
+                                 self.parse_post,
+                                 meta={'index':1, 'page_url': response.url})
+
+        #load following page, try to click on "more"
+        #after few pages have been scraped, the "more" link might disappears
+        #if not present look for the highest year not parsed yet
+        #click once on the year and go back to clicking "more"
+
+        #new_page is different for groups
+        if response.meta['group'] == 1:
+            new_page = response.xpath("//div[contains(@id,'stories_container')]/div[2]/a/@href").extract()
+        else:
+            new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()
+            #this is why lang is needed
+
+        if not new_page:
+            self.logger.info('[!] "more" link not found, will look for a "year" link')
+            #self.k is the year link that we look for
+            if response.meta['flag'] == self.k and self.k >= self.year:
+                xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
+                new_page = response.xpath(xpath).extract()
+                if new_page:
+                    new_page = response.urljoin(new_page[0])
+                    self.k -= 1
+                    self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))
                     yield scrapy.Request(new_page, 
-                                         callback=self.parse_page, 
+                                         callback=self.parse_page,
                                          priority = -1000, 
-                                         meta={'flag':response.meta['flag']})
+                                         meta={'flag':self.k, 'group': response.meta['group']})
                 else:
-                    self.logger.info('First page scraped, clicking on "more"! new_page = {}'.format(new_page))
+                    while not new_page: #sometimes the years are skipped this handles small year gaps
+                        self.logger.info('Link not found for year {}, trying with previous year {}'.format(self.k,self.k-1))
+                        self.k -= 1
+                        if self.k < self.year:
+                            raise CloseSpider('Reached date: {}. Crawling finished'.format(self.date))
+                        xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
+                        new_page = response.xpath(xpath).extract()
+                    self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))
+                    new_page = response.urljoin(new_page[0])
+                    self.k -= 1
                     yield scrapy.Request(new_page, 
-                                         callback=self.parse_page, 
-                                         priority = -1000, 
-                                         meta={'flag':self.k})
+                                         callback=self.parse_page,
+                                         priority = -1000,
+                                         meta={'flag':self.k, 'group': response.meta['group']})
+            else:
+                self.logger.info('Crawling has finished with no errors!')
+        else:
+            new_page = response.urljoin(new_page[0])
+            if 'flag' in response.meta:
+                self.logger.info('Page scraped, clicking on "more"! new_page = {}'.format(new_page))
+                yield scrapy.Request(new_page,
+                                     callback=self.parse_page,
+                                     priority = -1000,
+                                     meta={'flag':response.meta['flag'], 'group': response.meta['group']})
+            else:
+                self.logger.info('First page scraped, clicking on "more"! new_page = {}'.format(new_page))
+                yield scrapy.Request(new_page,
+                                     callback=self.parse_page,
+                                     priority = -1000,
+                                     meta={'flag':self.k, 'group': response.meta['group']})
 
     def parse_post(self, response):
         '''
@@ -149,7 +151,9 @@ class CommentsSpider(FacebookSpider):
                                        'url':response.url,
                                        'index':response.meta['index'],
                                        'flag':'init',
-                                       'group':group_flag})
+                                       'group':group_flag,
+                                       'page_url': response.meta['page_url'],
+                                       'post_url': response.url})
         #load regular comments     
         if not response.xpath(path): #prevents from exec
             path2 = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and not(.//div[contains(@id,"comment_replies")])]'
@@ -162,7 +166,8 @@ class CommentsSpider(FacebookSpider):
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
                 new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
-                new.add_value('url',response.url)
+                new.add_value('post_url',response.url)
+                new.add_value('page_url',response.meta['page_url'].split('?')[0])
                 yield new.load_item()
             
         #new comment page
@@ -178,7 +183,8 @@ class CommentsSpider(FacebookSpider):
                     yield scrapy.Request(new_page,
                                          callback=self.parse_post,
                                          meta={'index':1,
-                                               'group':1})        
+                                               'group':1,
+                                               'page_url': response.url})
             else:
                 for next_page in response.xpath(next_xpath):
                     new_page = next_page.xpath('.//@href').extract()
@@ -187,7 +193,8 @@ class CommentsSpider(FacebookSpider):
                     yield scrapy.Request(new_page,
                                          callback=self.parse_post,
                                          meta={'index':1,
-                                               'group':group_flag})        
+                                               'group':group_flag,
+                                               'page_url': response.url})
         
     def parse_reply(self,response):
         '''
@@ -207,7 +214,8 @@ class CommentsSpider(FacebookSpider):
                 new.add_xpath('text','.//div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
                 new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
-                new.add_value('url',response.url)
+                new.add_value('post_url',response.meta['post_url'])
+                new.add_value('page_url',response.meta['page_url'].split('?')[0])
                 yield new.load_item()
             #parse all replies in the page
             for reply in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): 
@@ -219,7 +227,8 @@ class CommentsSpider(FacebookSpider):
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
                 new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
-                new.add_value('url',response.url)   
+                new.add_value('post_url',response.meta['post_url'])
+                new.add_value('page_url',response.meta['page_url'].split('?')[0])
                 yield new.load_item()
                 
             back = response.xpath('//div[contains(@id,"comment_replies_more_1")]/a/@href').extract()
@@ -233,7 +242,9 @@ class CommentsSpider(FacebookSpider):
                                            'flag':'back',
                                            'url':response.meta['url'],
                                            'index':response.meta['index'],
-                                           'group':response.meta['group']})
+                                           'group':response.meta['group'],
+                                           'page_url': response.meta['page_url'],
+                                           'post_url': response.meta['post_url']})
 
             else:
                 next_reply = response.meta['url']
@@ -241,7 +252,9 @@ class CommentsSpider(FacebookSpider):
                 yield scrapy.Request(next_reply,
                                      callback=self.parse_post,
                                      meta={'index':response.meta['index']+1,
-                                           'group':response.meta['group']})
+                                           'group':response.meta['group'],
+                                           'page_url': response.meta['page_url'],
+                                           'post_url': response.meta['post_url']})
                 
         elif response.meta['flag'] == 'back':
             #parse all comments
@@ -254,7 +267,8 @@ class CommentsSpider(FacebookSpider):
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
                 new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
-                new.add_value('url',response.url)   
+                new.add_value('post_url',response.meta['post_url'])
+                new.add_value('page_url',response.meta['page_url'].split('?')[0])
                 yield new.load_item()
             #keep going backwards
             back = response.xpath('//div[contains(@id,"comment_replies_more_1")]/a/@href').extract()
@@ -268,7 +282,9 @@ class CommentsSpider(FacebookSpider):
                                            'flag':'back',
                                            'url':response.meta['url'],
                                            'index':response.meta['index'],
-                                           'group':response.meta['group']})
+                                           'group':response.meta['group'],
+                                           'page_url': response.meta['page_url'],
+                                           'post_url': response.meta['post_url']})
 
             else:
                 next_reply = response.meta['url']
@@ -276,7 +292,8 @@ class CommentsSpider(FacebookSpider):
                 yield scrapy.Request(next_reply,
                                      callback=self.parse_post,
                                      meta={'index':response.meta['index']+1,
-                                           'group':response.meta['group']})
+                                           'group':response.meta['group'],
+                                           'page_url': response.meta['page_url']})
                 
 # =============================================================================
 # CRAWL REACTIONS

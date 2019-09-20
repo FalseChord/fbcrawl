@@ -1,15 +1,6 @@
 # fbcrawl
 Fbcrawl is an advanced crawler for Facebook, written in python, based on the [Scrapy](https://scrapy.org/) framework. 
-
-## DONATIONS
-Fbcrawl is free software. It is not "free as beer" nor "free as speech", it is "free as a toilet": it is always available and working, but someone as to keep it clean and tidy, and I am the only one at the moment, it is not a community project. Please consider make a donation, it will keep this project alive and if I see actual interest from people I will get on with the [TODO](https://github.com/rugantio/fbcrawl/blob/master/README.md#TODO) list. One of the my long-term goal is to refactor the framework with a gui, connections to databases and graph vizualitations. These tasks would take at least a couple of months of work, and I will be able to afford them only with your support! Thank you :)
-
-[![paypal](https://www.paypalobjects.com/en_US/IT/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=G96T8U8W7UZDL&currency_code=EUR&source=url)
-
-## DISCLAIMER
-This software is not authorized by Facebook and doesn't follow Facebook's [robots.txt](https://www.facebook.com/robots.txt). Scraping without Facebook explicit written is a violation of the [terms and conditions on scraping](http://www.facebook.com/apps/site_scraping_tos_terms.php) and can potentially cause a [lawsuit](https://petewarden.com/2010/04/05/how-i-got-sued-by-facebook/)
-
-This software is provided as is, for educational purposes, to show how a crawler can be made to recursively parse a facebook page. Use at your own risk.
+This is a fork from fbcrawl and add some customization(mainly selenium). All credit goes to [fbcrawl](https://github.com/rugantio/fbcrawl).
 
 # Introduction
 
@@ -182,42 +173,3 @@ The supported facebook interface at the moment are `EN` and `IT`, they can be sp
 To enforce concurrency the `CONCURRENT_REQUESTS` parameter is set to `1`, this slows down the crawler but yields a tidier CSV in the end. If you don't care about row orders you can increase the parameter to a higher number and crawling will be faster.
 
 Reactions are the total number of reactions that the comment gets, a finer subdivision in types of reactions is not implemented.
-
-
-# TODO
-## Idea Brainstorm
-~~The crawler only works in italian:~~
-* ~~add english interface support~~
-* ~~add spanish interface support~~
-* ~~add french interface support~~
-* ~~add portuguese interface support~~
-
-~~Crawling starts from the beginning of 2017, it needs to go back until 2006:~~
-* ~~write appropriate recursive functions in parse_page~~
-
-~~Retrieve CSV timely ordered:~~
-* ~~Implement synchronous crawling~~
-
-~~Comments and commentators are not parsed:~~
-* ~~write a spider that crawls all the comments from a given post~~
-* ~~scrape total number of reactions from comments~~
-* ~~add features representing connections between commentators (-> reply-to)~~
-
-The number of shares is not retrieved, it is not available in `mbasic.facebook.com`. Also the number of comments field only counts direct comments and not reply comments, because that's how mbasic works. To fix both of these issues:
-* extract URL of post and use m.facebook.com to retrieve these data
-
-Some other interesting features can be derived. Comments and commentators can be related better to post and page:
-* count comments from same commentator under a post
-
-Better handling of data:
-* merge comments and posts and use JSON instead of CSV
-* add postgresql pipeline for simple CSV
-* add mongodb pipeline for more complex JSON
-
-Integrate data visualization:
-* display reactions and other features (comments, shares etc.) as timeseries
-* add networkx or graph-tools support to display connections (features as links) between posts and people (nodes) 
-* inegrate gephi or save out to gephi
-
-The script is not very user friendly:
-* create a gui using pyqt

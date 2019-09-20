@@ -8,7 +8,7 @@
 import scrapy
 from scrapy.loader.processors import TakeFirst, Join, MapCompose
 from datetime import datetime, timedelta
-    
+
 def comments_strip(string,loader_context):
     lang = loader_context['lang']
     if lang == 'it':
@@ -500,7 +500,10 @@ def parse_date2(init_date,loader_context):
             #Thursday at 4:27 PM
             elif date[1] == 'at':
                 today = datetime.now().weekday() #today as a weekday
-                weekday = days[date[0].lower()]   #day to be match as number weekday
+                if date[0].lower() == 'today':
+                    weekday = today
+                else:
+                    weekday = days[date[0].lower()]   #day to be match as number weekday
                 #weekday is chronologically always lower than day
                 delta = today - weekday   
                 if delta >= 0:
@@ -563,10 +566,9 @@ def id_strip(post_id):
     import json
     d = json.loads(post_id[::-1][0]) #nested dict of features
     return str(d['top_level_post_id'])
-    
 
 class FbcrawlItem(scrapy.Item):
-    source = scrapy.Field()   
+    source = scrapy.Field()
     date = scrapy.Field()       
     text = scrapy.Field(
         output_processor=Join(separator=u'')
@@ -603,6 +605,9 @@ class FbcrawlItem(scrapy.Item):
         output_processor=id_strip
     )
     shared_from = scrapy.Field()
+    post_url = scrapy.Field(
+        output_processor=url_strip
+    )
 
 class CommentsItem(scrapy.Item):
     source = scrapy.Field()   
@@ -620,7 +625,8 @@ class CommentsItem(scrapy.Item):
         output_processor=reactions_strip
     )                      
     source_url = scrapy.Field()                      
-    url = scrapy.Field()
+    page_url = scrapy.Field()
+    post_url = scrapy.Field()
     ahah = scrapy.Field()                      
     love = scrapy.Field()                      
     wow = scrapy.Field()                      
@@ -638,3 +644,4 @@ class ProfileItem(scrapy.Item):
     education = scrapy.Field()
     interested_in = scrapy.Field()
     page = scrapy.Field()
+
