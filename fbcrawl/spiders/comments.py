@@ -55,7 +55,8 @@ class CommentsSpider(FacebookSpider):
 
             #if 'date' argument is reached stop crawling
             if self.date > current_date:
-                return CloseSpider('Reached date: {}'.format(self.date))
+                self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
+                return
             #if 'skipto_date' argument is not reached, skip crawling
             if self.skipto_date < current_date:
                 continue
@@ -99,7 +100,8 @@ class CommentsSpider(FacebookSpider):
                         self.logger.info('Link not found for year {}, trying with previous year {}'.format(self.k,self.k-1))
                         self.k -= 1
                         if self.k < self.year:
-                            raise CloseSpider('Reached date: {}. Crawling finished'.format(self.date))
+                            self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
+                            return
                         xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
                         new_page = response.xpath(xpath).extract()
                     self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))

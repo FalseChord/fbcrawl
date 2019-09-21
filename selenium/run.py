@@ -30,6 +30,8 @@ def load_cookies(browser, file_path):
 		cookies = json.load(file)
 
 	for cookie in cookies:
+		if 'expiry' in cookie:
+			cookie['expiry'] = int(cookie['expiry'])
 		browser.add_cookie(cookie);
 
 def read_urls(file_path):

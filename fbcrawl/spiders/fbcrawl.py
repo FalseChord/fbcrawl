@@ -35,7 +35,8 @@ class FacebookSpider(scrapy.Spider):
         #parse date
         if 'date' not in kwargs:
             self.logger.info('Date attribute not provided, scraping date set to 2004-02-04 (fb launch date)')
-            self.date = datetime(2004,2,4)
+            self.date  = datetime.today() - timedelta(days=8)
+            #self.date = datetime(2004,2,4)
         else:
             self.date = datetime.strptime(kwargs['date'],'%Y-%m-%d')
             self.logger.info('Date attribute provided, fbcrawl will stop crawling at {}'.format(kwargs['date']))
@@ -163,7 +164,8 @@ class FacebookSpider(scrapy.Spider):
 
             #if 'date' argument is reached stop crawling
             if self.date > current_date:
-                return CloseSpider('Reached date: {}'.format(self.date))
+                self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
+                return
             #if 'skipto_date' argument is not reached, skip crawling
             if self.skipto_date < current_date:
                 continue
@@ -208,7 +210,8 @@ class FacebookSpider(scrapy.Spider):
                         self.logger.info('Link not found for year {}, trying with previous year {}'.format(self.k,self.k-1))
                         self.k -= 1
                         if self.k < self.year:
-                            return CloseSpider('Reached date: {}. Crawling finished'.format(self.date))
+                            self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
+                            return
                         xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
                         new_page = response.xpath(xpath).extract()
                     self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))
