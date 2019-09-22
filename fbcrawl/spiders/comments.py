@@ -32,6 +32,11 @@ class CommentsSpider(FacebookSpider):
             yield scrapy.Request(url=href,callback=self.parse_page,meta={'index': 1, 'group': group, 'flag':self.k},cookies=self.cookie)
 
     def parse_page(self, response):
+
+        #allowed maximum number of outdated post in a page
+        maximum_outdated_count = 3
+        outdated_count = 0
+
         posts = []
         if response.meta['group'] == 1:
             posts = response.xpath("//div[@id='m_group_stories_container']//div[contains(@data-ft,'mf_story_key')]")
@@ -55,8 +60,10 @@ class CommentsSpider(FacebookSpider):
 
             #if 'date' argument is reached stop crawling
             if self.date > current_date:
-                self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
-                return
+                outdated_count += 1
+                if outdated_count > maximum_outdated_count:
+                    self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
+                    return
             #if 'skipto_date' argument is not reached, skip crawling
             if self.skipto_date < current_date:
                 continue

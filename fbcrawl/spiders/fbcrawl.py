@@ -138,7 +138,11 @@ class FacebookSpider(scrapy.Spider):
 #        #open page in browser for debug
 #        from scrapy.utils.response import open_in_browser
 #        open_in_browser(response)
-    
+
+        #allowed maximum number of outdated post in a page
+        maximum_outdated_count = 3
+        outdated_count = 0
+
         #select all posts
 
         posts = []
@@ -164,8 +168,10 @@ class FacebookSpider(scrapy.Spider):
 
             #if 'date' argument is reached stop crawling
             if self.date > current_date:
-                self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
-                return
+                outdated_count += 1
+                if outdated_count > maximum_outdated_count:
+                    self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
+                    return
             #if 'skipto_date' argument is not reached, skip crawling
             if self.skipto_date < current_date:
                 continue
