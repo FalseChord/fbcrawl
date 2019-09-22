@@ -79,7 +79,7 @@ def run(browser, filename, urls):
 					raise Exception('Wrong group type')
 			
 			except Exception as e:
-				browser.save_screenshot(os.path.join(os.path.dirname(filename)), url.split('/')[-1] + '.png')
+				browser.save_screenshot(os.path.join(os.path.dirname(filename), url.split('?')[0].split('/')[-2] + '.png'))
 				print(e)
 				pass
 

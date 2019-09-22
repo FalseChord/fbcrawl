@@ -217,7 +217,7 @@ def run(browser, filename, urls):
 
 				time.sleep(5)
 			except Exception as e:
-				browser.save_screenshot(os.path.join(os.path.dirname(filename)), url.split('/')[-1] + '.png')
+				browser.save_screenshot(os.path.join(os.path.dirname(filename), url.split('?')[0].split('/')[-2] + '.png'))
 				print(e)
 				pass
 

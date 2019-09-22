@@ -126,7 +126,7 @@ class FacebookSpider(scrapy.Spider):
         for url in self.start_urls:
             #navigate to provided page
             group, page = self.trim_url(url)
-            href = response.urljoin('../' + page)
+            href = response.urljoin(page)
             self.logger.info('Scraping facebook page {}'.format(href))
             yield scrapy.Request(url=href,callback=self.parse_page,meta={'index': 1, 'group': group, 'flag':self.k})
 
@@ -268,7 +268,6 @@ class FacebookSpider(scrapy.Spider):
     def save_cookie(self):
         with open(self.cookie_path, 'w') as file:
             json.dump(self.cookie, file, indent=2)
-            print("cookie_saved")
 
     def load_urllist(self, file):
         with open(file) as f:
