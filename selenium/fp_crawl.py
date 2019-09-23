@@ -163,8 +163,10 @@ def parse_fp_ads(browser):
 
 def parse_fp_ad_detail(browser, btn, ad_obj):
 
-	browser.execute_script("arguments[0].scrollIntoView();", btn);
+	browser.execute_script("arguments[0].scrollIntoView(true);", btn);
 	browser.execute_script("window.scrollBy(0, -200)");
+
+	time.sleep(1)
 
 	del browser.requests
 	btn.click()
