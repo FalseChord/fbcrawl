@@ -3,6 +3,7 @@ import json
 import re
 import time
 import os
+import traceback
 #from selenium import webdriver
 from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
@@ -123,40 +124,44 @@ def parse_fp_ads(browser):
 	#ad_elements = browser.find_elements_by_class_name('_7owt')
 	ad_elements = browser.find_elements(By.XPATH, ".//div[@class='_7owt']")
 
-	for ad_element in ad_elements:
-		# ad_type = ''
-		# ad_link = ''
-		# if try_find_element(ad_element, ".//div[@class='_7jwy']/div/a[@class='_231w _231z _4yee']"):
-		# 	ad_type = 'link'
-		# 	ad_link = ad_element.find_element(By.XPATH, ".//div[@class='_7jwy']/div/a[@class='_231w _231z _4yee']").get_attribute('href')
+	try:
+		for ad_element in ad_elements:
+			# ad_type = ''
+			# ad_link = ''
+			# if try_find_element(ad_element, ".//div[@class='_7jwy']/div/a[@class='_231w _231z _4yee']"):
+			# 	ad_type = 'link'
+			# 	ad_link = ad_element.find_element(By.XPATH, ".//div[@class='_7jwy']/div/a[@class='_231w _231z _4yee']").get_attribute('href')
 
-		# elif try_find_element(ad_element, ".//div[@class='_7jwy']/div/img[@class='_7jys img']"):
-		# 	ad_type = 'image'
-		# 	ad_link = ad_element.find_element(By.XPATH, ".//div[@class='_7jwy']/div/img[@class='_7jys img']").get_attribute('src')
+			# elif try_find_element(ad_element, ".//div[@class='_7jwy']/div/img[@class='_7jys img']"):
+			# 	ad_type = 'image'
+			# 	ad_link = ad_element.find_element(By.XPATH, ".//div[@class='_7jwy']/div/img[@class='_7jys img']").get_attribute('src')
 
-		# elif try_find_element(ad_element, ".//div[@class='_7jwy']/div/div/video"):
-		# 	ad_type = 'video'
-		# 	ad_link = ad_element.find_element(By.XPATH, ".//div[@class='_7jwy']/div/div/video").get_attribute('src')
-		# else:
-		# 	ad_type = 'unknown'
+			# elif try_find_element(ad_element, ".//div[@class='_7jwy']/div/div/video"):
+			# 	ad_type = 'video'
+			# 	ad_link = ad_element.find_element(By.XPATH, ".//div[@class='_7jwy']/div/div/video").get_attribute('src')
+			# else:
+			# 	ad_type = 'unknown'
 
-		# ad_date = ad_element.find_element(By.XPATH, ".//div[@class='_7jwu']/span").text
-		# ad_text = ad_element.find_element(By.XPATH, ".//div[@class='_7jyr']").text
+			# ad_date = ad_element.find_element(By.XPATH, ".//div[@class='_7jwu']/span").text
+			# ad_text = ad_element.find_element(By.XPATH, ".//div[@class='_7jyr']").text
 
-		# ad_obj = {
-		# 	'type': ad_type,
-		# 	'date': ad_date,
-		# 	'text': ad_text,
-		# 	'link': ad_link,
-		# }
+			# ad_obj = {
+			# 	'type': ad_type,
+			# 	'date': ad_date,
+			# 	'text': ad_text,
+			# 	'link': ad_link,
+			# }
 
-		detail_btn = ad_element.find_element(By.XPATH, ".//a[@data-testid='snapshot_footer_link']")
-		result[ad_index] = parse_fp_ad_detail(browser, detail_btn, result[ad_index])
+			detail_btn = ad_element.find_element(By.XPATH, ".//a[@data-testid='snapshot_footer_link']")
+			result[ad_index] = parse_fp_ad_detail(browser, detail_btn, result[ad_index])
 
-		ad_index += 1
+			ad_index += 1
 
-		# if not ad_repeated(result, ad_obj):
-		# 	result.append(ad_obj)
+			# if not ad_repeated(result, ad_obj):
+			# 	result.append(ad_obj)
+	except Exception as e:
+		traceback.print_exc()
+		return result
 
 	ad_elements = None
 	return result
@@ -196,7 +201,12 @@ def run(browser, filename, urls):
 				WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, "//span[@class='_5dw8']")))
 				result['name'] = browser.find_element_by_id('u_0_0').text
 				#fp_community_btn = browser.find_elements_by_class_name('_5dw8')[0]
-				fp_transparency_btn = browser.find_elements_by_class_name('_5dw8')[2]
+
+				btn_candidates = browser.find_elements_by_class_name('_5dw8')
+				if len(btn_candidates) >= 3:
+					fp_transparency_btn = btn_candidates[2]
+				else:
+					fp_transparency_btn = btn_candidates[-1]
 
 				time.sleep(5)
 
@@ -220,7 +230,7 @@ def run(browser, filename, urls):
 				time.sleep(5)
 			except Exception as e:
 				browser.save_screenshot(os.path.join(os.path.dirname(filename), url.split('?')[0].split('/')[-2] + '.png'))
-				print(e)
+				traceback.print_exc()
 				pass
 
 			f.write(json.dumps(result) + '\n')
