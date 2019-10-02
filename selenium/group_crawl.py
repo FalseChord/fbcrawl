@@ -3,6 +3,7 @@ import json
 import re
 import time
 import os
+import traceback
 #from selenium import webdriver
 from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
@@ -80,7 +81,7 @@ def run(browser, filename, urls):
 			
 			except Exception as e:
 				browser.save_screenshot(os.path.join(os.path.dirname(filename), url.split('?')[0].split('/')[-2] + '.png'))
-				print(e)
+				traceback.print_exc()
 				pass
 
 			f.write(json.dumps(result) + '\n')

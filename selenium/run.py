@@ -4,6 +4,7 @@ from seleniumwire import webdriver
 import os
 import json
 import fp_crawl, group_crawl
+import traceback
 
 DATE = datetime.now().strftime('%y%m%d')
 DATADIR = '../data/'+DATE
@@ -56,6 +57,7 @@ if __name__ == '__main__':
 		group_crawl.run(browser, os.path.join(os.path.dirname(__file__), DATADIR, GROUP_OUT), read_urls(related_path(GROUP_URLS)))
 	except Exception as e:
 		print(e)
+		traceback.print_exc()
 		pass
 
 	save_cookies(browser, "cookie.json")
