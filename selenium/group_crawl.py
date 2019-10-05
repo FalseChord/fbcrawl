@@ -12,12 +12,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-def parse_pub_meta(browser):
-	WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, "//div[@class='_2v-2']")))
-	member = int(browser.find_element(By.XPATH, "//div[@class='_2v-2'][1]").text.split('·')[1].strip().replace(',',''))
-	return {
-		"member_total": member
-	}
+# def parse_pub_meta(browser):
+# 	WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, "//div[@class='_2v-2']")))
+# 	member = int(browser.find_element(By.XPATH, "//div[@class='_2v-2'][1]").text.split('·')[1].strip().replace(',',''))
+# 	return {
+# 		"member_total": member
+# 	}
 
 def parse_history(browser):
 
@@ -42,7 +42,7 @@ def parse_history(browser):
 
 	return result
 
-def parse_pri_meta(browser):
+def parse_meta(browser):
 	WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.XPATH, "//span[text()='Activity']/../..")))
 	meta_posts = browser.find_element(By.XPATH, "//span[text()='Activity']/../..//div[@class='_4bl9']").text.split('\n')
 	meta_members = browser.find_element(By.XPATH, "//span[text()='Activity']/../..//div[@class='_4bl7']").text.split('\n')
@@ -70,18 +70,19 @@ def run(browser, filename, urls):
 				public_string = browser.find_element(By.XPATH, ".//div[@class='_19s_']").text
 
 				if public_string == 'Closed group':
-					result["meta"] = parse_pri_meta(browser)
+					result["meta"] = parse_meta(browser)
 					result["history"] = parse_history(browser)
 				elif public_string == 'Public group':
 					browser.get(url + 'about')
-					result["meta"] = parse_pub_meta(browser)
+					result["meta"] = parse_meta(browser)
 					result["history"] = parse_history(browser)
 				else:
 					raise Exception('Wrong group type')
 			
 			except Exception as e:
 				browser.save_screenshot(os.path.join(os.path.dirname(filename), url.split('?')[0].split('/')[-2] + '.png'))
-				traceback.print_exc()
+				with open(os.path.join(os.path.dirname(filename), 'err.log'), 'a+') as errlog:
+					traceback.print_exc(file=errlog)
 				pass
 
 			f.write(json.dumps(result) + '\n')
