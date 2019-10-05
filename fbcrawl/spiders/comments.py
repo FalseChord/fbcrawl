@@ -64,6 +64,8 @@ class CommentsSpider(FacebookSpider):
                 if outdated_count > maximum_outdated_count:
                     self.logger.info('Reached date: {} for crawling page {}. Crawling finished'.format(self.date, response.url))
                     return
+                else:
+                    continue
             #if 'skipto_date' argument is not reached, skip crawling
             if self.skipto_date < current_date:
                 continue

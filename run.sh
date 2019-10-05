@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+cd /usr/local/crawlers/fbcrawl
+
 source ./env/bin/activate
 python selenium/run.py
 
