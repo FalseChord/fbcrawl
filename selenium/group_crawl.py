@@ -23,6 +23,8 @@ def parse_history(browser):
 
 	history_tab_path = "//div[@id='rhc_col']//a[text()='See More'][1]"
 	history_btn = browser.find_element(By.XPATH, history_tab_path)
+	browser.execute_script("window.scrollBy(0, 100);")
+	time.sleep(3)
 	history_btn.click()
 	time.sleep(5)
 
