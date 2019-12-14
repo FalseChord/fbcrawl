@@ -65,7 +65,7 @@ def parse_fp_history(browser):
 				result.append({"type":"change", "name": text.replace("Changed name to", "").strip()})
 			elif "Created" in text or "created" in text:
 				result.append({"type":"create", "name": text.replace("Page created -", "").strip()})
-			elif "Merged" in test or "merged" in test:
+			elif "Merged" in text or "merged" in text:
 				result.append({"type":"merge", "name": text.replace("Merged with Page", "").strip()})
 		else:
 			result[-1]["date"] = text
