@@ -35,9 +35,10 @@ def get_log(ts=0):
 
 #should be in main page
 def parse_fp_meta(browser):
-	meta_strings = browser.find_elements(By.XPATH, "//span[@class='_38my' and text()='Community']/../..//div[@class='_4bl9']")
-	fp_like = meta_strings[0].text.split(" ")[0].replace(",","")
-	fp_follow = meta_strings[1].text.split(" ")[0].replace(",","")
+	fp_like_string = browser.find_elements(By.XPATH, "//span[@class='_38my' and text()='Community']/../..//div[@class='_4bl9']/div[contains(text(),'people like')]")[0].text
+	fp_like = fp_like_string.split(" ")[0].replace(",","")
+	fp_follow_string = browser.find_elements(By.XPATH, "//span[@class='_38my' and text()='Community']/../..//div[@class='_4bl9']/div[contains(text(),'people follow')]")[0].text
+	fp_follow = fp_follow_string.split(" ")[0].replace(",","")
 	result = {
 		"like": int(fp_like),
 		"follow": int(fp_follow)
@@ -104,7 +105,7 @@ def parse_fp_ads(browser):
 	browser.switch_to.window(browser.window_handles[0])
 
 	result = []
-	
+
 	try:
 		WebDriverWait(browser, 30).until(EC.presence_of_element_located((By.XPATH, ".//div[@class='_7owt']")))
 	except:
